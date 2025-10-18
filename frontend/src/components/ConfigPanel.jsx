@@ -14,8 +14,9 @@ export default function ConfigPanel({ config, onConfigUpdated }) {
       items: [
         { label: 'Copy Buy Only', value: config.copyBuyOnly ? 'Enabled' : 'Disabled', enabled: config.copyBuyOnly },
         { label: 'Copy Sell', value: config.copySell ? 'Enabled' : 'Disabled', enabled: config.copySell },
-        { label: 'Max Buy Amount', value: `${config.maxBuyAmountBnb} BNB` },
-        { label: 'Slippage', value: `${config.slippagePercent}%` },
+        { label: 'Buy Amount', value: `${config.buyAmountBnb || config.maxBuyAmountBnb || 0.01} BNB` },
+        { label: 'Buy Slippage', value: `${config.buySlippagePercent || config.slippagePercent || 2}%` },
+        { label: 'Sell Slippage', value: `${config.sellSlippagePercent || config.slippagePercent || 2}%` },
       ]
     },
     {
@@ -23,16 +24,18 @@ export default function ConfigPanel({ config, onConfigUpdated }) {
       icon: Zap,
       items: [
         { label: 'Auto Take Profit', value: config.autoTakeProfitEnabled ? 'Enabled' : 'Disabled', enabled: config.autoTakeProfitEnabled },
-        { label: 'Take Profit Target', value: `${config.takeProfitPercent}%` },
+        { label: 'Price Target', value: `${config.takeProfitPercent}%` },
+        { label: 'Sell % of Bag', value: `${config.takeProfitBagPercent || 100}%` },
       ]
     },
     {
       title: 'Safety Filters',
       icon: Shield,
       items: [
-        { label: 'Min Liquidity', value: `$${config.minLiquidityUsd?.toLocaleString()}` },
-        { label: 'Max Token Age', value: `${config.maxTokenAgeHours}h` },
-        { label: 'One-Time Buy', value: config.oneTimeBuyPerToken ? 'Enabled' : 'Disabled', enabled: config.oneTimeBuyPerToken },
+        { label: 'Buy Gas', value: `${config.buyGasGwei || config.maxGasPriceGwei || 10} Gwei` },
+        { label: 'Sell Gas', value: `${config.sellGasGwei || config.maxGasPriceGwei || 10} Gwei` },
+        { label: 'Max Market Cap', value: config.maxMarketCapUsd > 0 ? `$${config.maxMarketCapUsd.toLocaleString()}` : 'Unlimited' },
+        { label: 'Max Token Age', value: config.maxTokenAgeSeconds > 0 ? `${config.maxTokenAgeSeconds}s` : 'Unlimited' },
       ]
     },
     {

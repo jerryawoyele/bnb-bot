@@ -141,102 +141,152 @@ export default function ConfigEditor({ config, onClose, onSaved }) {
               </label>
 
               {formData.autoTakeProfitEnabled && (
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Take Profit Percent (%)</label>
-                  <input
-                    type="number"
-                    value={formData.takeProfitPercent}
-                    onChange={(e) => handleChange('takeProfitPercent', parseFloat(e.target.value))}
-                    className="input w-full"
-                    min="0"
-                    step="10"
-                  />
+                <div className="space-y-3 ml-7">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Price Increase Target (%)</label>
+                    <input
+                      type="number"
+                      value={formData.takeProfitPercent}
+                      onChange={(e) => handleChange('takeProfitPercent', parseFloat(e.target.value))}
+                      className="input w-full"
+                      min="0"
+                      step="10"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Sell when price increases by this %</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Sell % of Bag</label>
+                    <input
+                      type="number"
+                      value={formData.takeProfitBagPercent}
+                      onChange={(e) => handleChange('takeProfitBagPercent', parseFloat(e.target.value))}
+                      className="input w-full"
+                      min="1"
+                      max="100"
+                      step="5"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">What % of position to sell (100 = all)</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Risk Management */}
+          {/* Buy Settings */}
           <div>
-            <h3 className="text-lg font-bold mb-3 text-primary">Risk Management</h3>
+            <h3 className="text-lg font-bold mb-3 text-primary">💰 Buy Settings</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Max Buy Amount (BNB)</label>
+                <label className="block text-sm text-gray-400 mb-1">Buy Amount (BNB) - Fixed</label>
                 <input
                   type="number"
-                  value={formData.maxBuyAmountBnb}
-                  onChange={(e) => handleChange('maxBuyAmountBnb', parseFloat(e.target.value))}
+                  value={formData.buyAmountBnb}
+                  onChange={(e) => handleChange('buyAmountBnb', parseFloat(e.target.value))}
                   className="input w-full"
-                  min="0"
-                  step="0.1"
+                  min="0.001"
+                  step="0.001"
                 />
+                <p className="text-xs text-gray-500 mt-1">Bot always buys with this exact amount</p>
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Slippage Tolerance (%)</label>
+                <label className="block text-sm text-gray-400 mb-1">Buy Gas (Gwei)</label>
                 <input
                   type="number"
-                  value={formData.slippagePercent}
-                  onChange={(e) => handleChange('slippagePercent', parseFloat(e.target.value))}
-                  className="input w-full"
-                  min="0"
-                  max="50"
-                  step="0.5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Max Gas Price (Gwei)</label>
-                <input
-                  type="number"
-                  value={formData.maxGasPriceGwei}
-                  onChange={(e) => handleChange('maxGasPriceGwei', parseFloat(e.target.value))}
+                  value={formData.buyGasGwei}
+                  onChange={(e) => handleChange('buyGasGwei', parseFloat(e.target.value))}
                   className="input w-full"
                   min="1"
                   step="1"
                 />
+                <p className="text-xs text-gray-500 mt-1">Max gas price for buy transactions</p>
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Min Liquidity (USD)</label>
+                <label className="block text-sm text-gray-400 mb-1">Buy Slippage (%)</label>
                 <input
                   type="number"
-                  value={formData.minLiquidityUsd}
-                  onChange={(e) => handleChange('minLiquidityUsd', parseFloat(e.target.value))}
+                  value={formData.buySlippagePercent}
+                  onChange={(e) => handleChange('buySlippagePercent', parseFloat(e.target.value))}
                   className="input w-full"
-                  min="0"
-                  step="1000"
+                  min="0.1"
+                  max="50"
+                  step="0.5"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Max Token Age (Hours)</label>
-                <input
-                  type="number"
-                  value={formData.maxTokenAgeHours}
-                  onChange={(e) => handleChange('maxTokenAgeHours', parseFloat(e.target.value))}
-                  className="input w-full"
-                  min="0"
-                  step="1"
-                />
+                <p className="text-xs text-gray-500 mt-1">Slippage tolerance for buys</p>
               </div>
             </div>
           </div>
 
-          {/* Filters */}
+          {/* Sell Settings */}
           <div>
-            <h3 className="text-lg font-bold mb-3 text-primary">Filters</h3>
+            <h3 className="text-lg font-bold mb-3 text-primary">💸 Sell Settings</h3>
             <div className="space-y-3">
-              <label className="flex items-center space-x-3">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Sell Gas (Gwei)</label>
                 <input
-                  type="checkbox"
-                  checked={formData.oneTimeBuyPerToken}
-                  onChange={(e) => handleChange('oneTimeBuyPerToken', e.target.checked)}
-                  className="w-4 h-4"
+                  type="number"
+                  value={formData.sellGasGwei}
+                  onChange={(e) => handleChange('sellGasGwei', parseFloat(e.target.value))}
+                  className="input w-full"
+                  min="1"
+                  step="1"
                 />
-                <span>One-Time Buy Per Token</span>
-              </label>
+                <p className="text-xs text-gray-500 mt-1">Max gas price for sell transactions</p>
+              </div>
 
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Sell Slippage (%)</label>
+                <input
+                  type="number"
+                  value={formData.sellSlippagePercent}
+                  onChange={(e) => handleChange('sellSlippagePercent', parseFloat(e.target.value))}
+                  className="input w-full"
+                  min="0.1"
+                  max="50"
+                  step="0.5"
+                />
+                <p className="text-xs text-gray-500 mt-1">Slippage tolerance for sells</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Token Filters */}
+          <div>
+            <h3 className="text-lg font-bold mb-3 text-primary">🔍 Token Filters</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Max Market Cap (USD)</label>
+                <input
+                  type="number"
+                  value={formData.maxMarketCapUsd}
+                  onChange={(e) => handleChange('maxMarketCapUsd', parseFloat(e.target.value))}
+                  className="input w-full"
+                  min="0"
+                  step="100000"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only buy tokens below this market cap (0 = unlimited)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Max Token Age (Seconds)</label>
+                <input
+                  type="number"
+                  value={formData.maxTokenAgeSeconds}
+                  onChange={(e) => handleChange('maxTokenAgeSeconds', parseFloat(e.target.value))}
+                  className="input w-full"
+                  min="0"
+                  step="60"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only buy tokens newer than this (0 = unlimited, 300 = 5min)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Auto-Follow Settings */}
+          <div>
+            <h3 className="text-lg font-bold mb-3 text-primary">🔄 Auto-Follow Settings</h3>
+            <div className="space-y-3">
               <label className="flex items-center space-x-3">
                 <input
                   type="checkbox"
@@ -244,26 +294,30 @@ export default function ConfigEditor({ config, onClose, onSaved }) {
                   onChange={(e) => handleChange('autoFollowEnabled', e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span>Auto Follow Enabled</span>
+                <span>Auto-Follow Wallet Transfers</span>
               </label>
+              <p className="text-xs text-gray-500 ml-7">Follow BNB transfers to new wallets automatically</p>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Min Transfer Amount (BNB)</label>
-                <input
-                  type="number"
-                  value={formData.minTransferAmountBnb}
-                  onChange={(e) => handleChange('minTransferAmountBnb', parseFloat(e.target.value))}
-                  className="input w-full"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
+              {formData.autoFollowEnabled && (
+                <div className="ml-7">
+                  <label className="block text-sm text-gray-400 mb-1">Min Transfer Amount (BNB)</label>
+                  <input
+                    type="number"
+                    value={formData.minTransferAmountBnb}
+                    onChange={(e) => handleChange('minTransferAmountBnb', parseFloat(e.target.value))}
+                    className="input w-full"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Only switch if BNB transfer is above this amount</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Performance */}
           <div>
-            <h3 className="text-lg font-bold mb-3 text-primary">Performance</h3>
+            <h3 className="text-lg font-bold mb-3 text-primary">⚡ Performance</h3>
             <div className="space-y-3">
               <label className="flex items-center space-x-3">
                 <input
@@ -272,27 +326,31 @@ export default function ConfigEditor({ config, onClose, onSaved }) {
                   onChange={(e) => handleChange('fastMode', e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span>Fast Mode</span>
+                <span>Fast Mode (Higher Gas Priority)</span>
               </label>
+              <p className="text-xs text-gray-500 ml-7">Use gas multiplier for faster transaction confirmations</p>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Gas Multiplier</label>
-                <input
-                  type="number"
-                  value={formData.gasMultiplier}
-                  onChange={(e) => handleChange('gasMultiplier', parseFloat(e.target.value))}
-                  className="input w-full"
-                  min="1"
-                  max="3"
-                  step="0.1"
-                />
-              </div>
+              {formData.fastMode && (
+                <div className="ml-7">
+                  <label className="block text-sm text-gray-400 mb-1">Gas Multiplier</label>
+                  <input
+                    type="number"
+                    value={formData.gasMultiplier}
+                    onChange={(e) => handleChange('gasMultiplier', parseFloat(e.target.value))}
+                    className="input w-full"
+                    min="1"
+                    max="3"
+                    step="0.1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Multiply gas by this amount (1.2 = 20% higher gas)</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Blacklist */}
           <div>
-            <h3 className="text-lg font-bold mb-3 text-primary">Blacklist & Whitelist</h3>
+            <h3 className="text-lg font-bold mb-3 text-primary">🚫 Blacklist & Whitelist</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">
