@@ -1,0 +1,32 @@
+{
+  "name": "bnb-copy-trading-bot",
+  "version": "1.0.0",
+  "description": "Smart copy-trading bot for BNB Chain with auto-follow and filtering",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main-controller.js",
+    "start:old": "node src/index.js",
+    "test": "node test-connection.js",
+    "test-connection": "node test-connection.js"
+  },
+  "keywords": [
+    "bnb",
+    "copy-trading",
+    "bot",
+    "pancakeswap",
+    "defi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.10.0",
+    "dotenv": "^16.3.1",
+    "bignumber.js": "^9.1.2",
+    "axios": "^1.6.5",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "socket.io": "^4.6.1",
+    "mongoose": "^8.0.3"
+  }
+}
