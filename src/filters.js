@@ -173,14 +173,15 @@ export class TradeFilter {
    * Check if router is in allowed list
    */
   async checkAllowedRouter(router) {
+    const activeConfig = await this.getConfig();
     const routerLower = router.toLowerCase();
     
     // If no allowed routers specified, allow all
-    if (config.allowedRouters.length === 0) {
+    if (!activeConfig.allowedRouters || activeConfig.allowedRouters.length === 0) {
       return { passed: true, reason: 'No router whitelist configured' };
     }
 
-    const isAllowed = config.allowedRouters.includes(routerLower);
+    const isAllowed = activeConfig.allowedRouters.includes(routerLower);
     return {
       passed: isAllowed,
       reason: isAllowed 
@@ -193,8 +194,9 @@ export class TradeFilter {
    * Check if token is blacklisted
    */
   async checkNotBlacklisted(tokenAddress) {
+    const activeConfig = await this.getConfig();
     const tokenLower = tokenAddress.toLowerCase();
-    const isBlacklisted = config.blacklistedTokens.includes(tokenLower);
+    const isBlacklisted = activeConfig.blacklistedTokens && activeConfig.blacklistedTokens.includes(tokenLower);
     
     return {
       passed: !isBlacklisted,
@@ -207,16 +209,17 @@ export class TradeFilter {
   /**
    * Check if buy amount is within limit
    */
-  checkMaxBuyAmount(amountBnb) {
-    const withinLimit = amountBnb <= config.maxBuyAmountBnb;
+  async checkMaxBuyAmount(amountBnb) {
+    const activeConfig = await this.getConfig();
+    const withinLimit = amountBnb <= activeConfig.maxBuyAmountBnb;
     
     return {
       passed: withinLimit,
       reason: withinLimit
         ? `Amount ${amountBnb} BNB within limit`
-        : `Amount ${amountBnb} BNB exceeds max ${config.maxBuyAmountBnb} BNB`,
+        : `Amount ${amountBnb} BNB exceeds max ${activeConfig.maxBuyAmountBnb} BNB`,
       amountBnb,
-      maxBuyAmountBnb: config.maxBuyAmountBnb,
+      maxBuyAmountBnb: activeConfig.maxBuyAmountBnb,
     };
   }
 
@@ -225,17 +228,18 @@ export class TradeFilter {
    */
   async checkGasPrice() {
     try {
+      const activeConfig = await this.getConfig();
       const feeData = await this.provider.getFeeData();
       const gasPriceGwei = parseFloat(ethers.formatUnits(feeData.gasPrice, 'gwei'));
-      const withinLimit = gasPriceGwei <= config.maxGasPriceGwei;
+      const withinLimit = gasPriceGwei <= activeConfig.maxGasPriceGwei;
       
       return {
         passed: withinLimit,
         reason: withinLimit
           ? `Gas price ${gasPriceGwei.toFixed(2)} Gwei acceptable`
-          : `Gas price ${gasPriceGwei.toFixed(2)} Gwei exceeds max ${config.maxGasPriceGwei} Gwei`,
+          : `Gas price ${gasPriceGwei.toFixed(2)} Gwei exceeds max ${activeConfig.maxGasPriceGwei} Gwei`,
         gasPriceGwei,
-        maxGasPriceGwei: config.maxGasPriceGwei,
+        maxGasPriceGwei: activeConfig.maxGasPriceGwei,
       };
     } catch (error) {
       logger.warn('Could not check gas price:', error.message);
@@ -282,19 +286,20 @@ export class TradeFilter {
       const liquidityBnb = parseFloat(ethers.formatEther(bnbReserve));
       
       // Get BNB price and convert to USD
+      const activeConfig = await this.getConfig();
       const bnbPriceUsd = await this.getBnbPriceUsd();
       const liquidityUsd = liquidityBnb * bnbPriceUsd;
       
-      const sufficient = liquidityUsd >= config.minLiquidityUsd;
+      const sufficient = liquidityUsd >= activeConfig.minLiquidityUsd;
 
       return {
         passed: sufficient,
         reason: sufficient
           ? `Liquidity $${liquidityUsd.toFixed(0)} is sufficient`
-          : `Liquidity $${liquidityUsd.toFixed(0)} below minimum $${config.minLiquidityUsd}`,
+          : `Liquidity $${liquidityUsd.toFixed(0)} below minimum $${activeConfig.minLiquidityUsd}`,
         liquidityBnb,
         liquidityUsd,
-        minLiquidityUsd: config.minLiquidityUsd,
+        minLiquidityUsd: activeConfig.minLiquidityUsd,
         pairAddress,
       };
     } catch (error) {
@@ -333,18 +338,19 @@ export class TradeFilter {
 
       // Get the earliest event
       const firstEvent = events[0];
+      const activeConfig = await this.getConfig();
       const block = await this.provider.getBlock(firstEvent.blockNumber);
       const tokenAgeHours = (Date.now() / 1000 - block.timestamp) / 3600;
       
-      const acceptable = tokenAgeHours <= config.maxTokenAgeHours || config.maxTokenAgeHours === 0;
+      const acceptable = tokenAgeHours <= activeConfig.maxTokenAgeHours || activeConfig.maxTokenAgeHours === 0;
 
       return {
         passed: acceptable,
         reason: acceptable
           ? `Token age ${tokenAgeHours.toFixed(2)} hours is acceptable`
-          : `Token age ${tokenAgeHours.toFixed(2)} hours exceeds max ${config.maxTokenAgeHours} hours`,
+          : `Token age ${tokenAgeHours.toFixed(2)} hours exceeds max ${activeConfig.maxTokenAgeHours} hours`,
         tokenAgeHours,
-        maxTokenAgeHours: config.maxTokenAgeHours,
+        maxTokenAgeHours: activeConfig.maxTokenAgeHours,
       };
     } catch (error) {
       logger.warn('Could not check token age:', error.message);
@@ -356,12 +362,13 @@ export class TradeFilter {
   /**
    * Calculate adjusted buy amount based on max limit
    */
-  calculateAdjustedAmount(originalAmountBnb) {
-    if (originalAmountBnb <= config.maxBuyAmountBnb) {
+  async calculateAdjustedAmount(originalAmountBnb) {
+    const activeConfig = await this.getConfig();
+    if (originalAmountBnb <= activeConfig.maxBuyAmountBnb) {
       return originalAmountBnb;
     }
     
     // Cap at max buy amount
-    return config.maxBuyAmountBnb;
+    return activeConfig.maxBuyAmountBnb;
   }
 }

@@ -52,10 +52,11 @@ export class WalletTracker extends EventEmitter {
     const balance = await this.executor.getBnbBalance();
     logger.info(`💰 Bot balance: ${balance.toFixed(4)} BNB`);
     
-    this.printConfig();
+    await this.printConfig();
 
-    // Send startup notification
-    const mode = config.copyBuyOnly ? 'BUY ONLY' : 'BUY & SELL';
+    // Send startup notification - use MongoDB config
+    const activeConfig = await this.filter.getConfig();
+    const mode = activeConfig.copyBuyOnly ? 'BUY ONLY' : 'BUY & SELL';
     await this.notificationService.notifyBotStartup(
       this.wallet.address,
       this.watchedWallet,
@@ -245,7 +246,7 @@ export class WalletTracker extends EventEmitter {
       // Calculate adjusted amount if needed
       let adjustedAmount = null;
       if (analysis.swapType === 'BUY') {
-        adjustedAmount = this.filter.calculateAdjustedAmount(analysis.amountInBnb);
+        adjustedAmount = await this.filter.calculateAdjustedAmount(analysis.amountInBnb);
         if (adjustedAmount !== analysis.amountInBnb) {
           logger.info(`📊 Adjusted buy amount: ${analysis.amountInBnb} -> ${adjustedAmount} BNB`);
         }
@@ -380,32 +381,35 @@ export class WalletTracker extends EventEmitter {
   /**
    * Print current configuration
    */
-  printConfig() {
-    logger.info('\n⚙️  Configuration:');
-    logger.info(`   Mode: ${config.copyBuyOnly ? '🟢 BUY ONLY' : '🔵 BUY & SELL'}`);
-    logger.info(`   Max Buy Amount: ${config.maxBuyAmountBnb} BNB`);
-    logger.info(`   Slippage: ${config.slippagePercent}%`);
-    logger.info(`   Max Gas Price: ${config.maxGasPriceGwei} Gwei`);
-    logger.info(`   Min Liquidity: $${config.minLiquidityUsd.toLocaleString()}`);
-    logger.info(`   Max Token Age: ${config.maxTokenAgeHours} hours`);
-    logger.info(`   One-Time Buy: ${config.oneTimeBuyPerToken ? 'Enabled' : 'Disabled'}`);
-    logger.info(`   Auto-Follow: ${config.autoFollowEnabled ? 'Enabled' : 'Disabled'}`);
-    logger.info(`   Fast Mode: ${config.fastMode ? `Enabled (${config.gasMultiplier}x gas)` : 'Disabled'}`);
+  async printConfig() {
+    // Get config from MongoDB (via filter which has caching)
+    const activeConfig = await this.filter.getConfig();
     
-    if (config.autoTakeProfitEnabled) {
-      logger.info(`   Take Profit: ${config.takeProfitPercent}%`);
+    logger.info('\n⚙️  Configuration:');
+    logger.info(`   Mode: ${activeConfig.copyBuyOnly ? '🟢 BUY ONLY' : '🔵 BUY & SELL'}`);
+    logger.info(`   Max Buy Amount: ${activeConfig.maxBuyAmountBnb} BNB`);
+    logger.info(`   Slippage: ${activeConfig.slippagePercent}%`);
+    logger.info(`   Max Gas Price: ${activeConfig.maxGasPriceGwei} Gwei`);
+    logger.info(`   Min Liquidity: $${activeConfig.minLiquidityUsd.toLocaleString()}`);
+    logger.info(`   Max Token Age: ${activeConfig.maxTokenAgeHours} hours`);
+    logger.info(`   One-Time Buy: ${activeConfig.oneTimeBuyPerToken ? 'Enabled' : 'Disabled'}`);
+    logger.info(`   Auto-Follow: ${activeConfig.autoFollowEnabled ? 'Enabled' : 'Disabled'}`);
+    logger.info(`   Fast Mode: ${activeConfig.fastMode ? `Enabled (${activeConfig.gasMultiplier}x gas)` : 'Disabled'}`);
+    
+    if (activeConfig.autoTakeProfitEnabled) {
+      logger.info(`   Take Profit: ${activeConfig.takeProfitPercent}%`);
     }
     
-    if (config.enableTelegramAlerts) {
+    if (activeConfig.enableTelegramAlerts) {
       logger.info(`   Telegram Alerts: Enabled`);
     }
     
-    if (config.allowedRouters.length > 0) {
-      logger.info(`   Allowed Routers: ${config.allowedRouters.length} router(s)`);
+    if (activeConfig.allowedRouters && activeConfig.allowedRouters.length > 0) {
+      logger.info(`   Allowed Routers: ${activeConfig.allowedRouters.length} router(s)`);
     }
     
-    if (config.blacklistedTokens.length > 0) {
-      logger.info(`   Blacklisted Tokens: ${config.blacklistedTokens.length} token(s)`);
+    if (activeConfig.blacklistedTokens && activeConfig.blacklistedTokens.length > 0) {
+      logger.info(`   Blacklisted Tokens: ${activeConfig.blacklistedTokens.length} token(s)`);
     }
     logger.info('');
   }
