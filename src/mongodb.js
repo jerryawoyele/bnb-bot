@@ -3,6 +3,7 @@ import { Session } from './models/Session.js';
 import { Log } from './models/Log.js';
 import { Trade } from './models/Trade.js';
 import { Position } from './models/Position.js';
+import { Config } from './models/Config.js';
 
 /**
  * MongoDB Database Manager for Bot Data Persistence
@@ -303,6 +304,64 @@ export class MongoDatabase {
         open_positions: 0,
         closed_positions: 0
       };
+    }
+  }
+
+  // ============ CONFIG MANAGEMENT ============
+
+  async getConfig() {
+    try {
+      // Get the most recent config or create default
+      let config = await Config.findOne().sort({ updatedAt: -1 });
+      
+      if (!config) {
+        // Create default config if none exists
+        config = await Config.create({
+          copyBuyOnly: true,
+          copySell: false,
+          autoTakeProfitEnabled: true,
+          takeProfitPercent: 100,
+          maxBuyAmountBnb: 0.5,
+          slippagePercent: 2,
+          maxGasPriceGwei: 10,
+          minLiquidityUsd: 10000,
+          maxTokenAgeHours: 72,
+          oneTimeBuyPerToken: true,
+          autoFollowEnabled: true,
+          minTransferAmountBnb: 0.1,
+          fastMode: true,
+          gasMultiplier: 1.2,
+          blacklistedTokens: [],
+          allowedRouters: ['0x10ED43C718714eb63d5aA57B78B54704E256024E']
+        });
+      }
+
+      // Return plain object
+      return config.toObject();
+    } catch (error) {
+      console.error('Failed to get config:', error.message);
+      return null;
+    }
+  }
+
+  async updateConfig(updates) {
+    try {
+      // Update the most recent config or create new
+      let config = await Config.findOne().sort({ updatedAt: -1 });
+      
+      if (!config) {
+        config = new Config(updates);
+      } else {
+        Object.assign(config, updates);
+      }
+      
+      config.lastUpdated = new Date();
+      await config.save();
+      
+      return config.toObject();
+    } catch (error) {
+      console.error('Failed to update config:', error.message);
+      throw error;
     }
   }
 

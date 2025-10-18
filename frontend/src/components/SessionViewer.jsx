@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { History, Calendar, Clock, TrendingUp, Eye, Download } from 'lucide-react';
 import axios from 'axios';
+import WalletAddress from './WalletAddress';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -125,12 +126,12 @@ export default function SessionViewer() {
             ← Back to Sessions
           </button>
 
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="flex-1">
               <h2 className="text-2xl font-bold mb-2">Session Details</h2>
-              <p className="text-sm text-gray-400 font-mono">{session.sessionId}</p>
+              <p className="text-sm text-gray-400 font-mono break-all">{session.sessionId}</p>
             </div>
-            <span className={`badge ${getStatusColor(session.status)}`}>
+            <span className={`badge ${getStatusColor(session.status)} whitespace-nowrap`}>
               {session.status}
             </span>
           </div>
@@ -154,13 +155,13 @@ export default function SessionViewer() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Watched Wallet:</span>
-                <span className="font-mono text-xs text-primary">{session.watchedWallet}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <span className="text-gray-400 flex-shrink-0">Watched Wallet:</span>
+                <WalletAddress address={session.watchedWallet} className="text-primary" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Bot Wallet:</span>
-                <span className="font-mono text-xs">{session.botWallet}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <span className="text-gray-400 flex-shrink-0">Bot Wallet:</span>
+                <WalletAddress address={session.botWallet} />
               </div>
             </div>
           </div>
@@ -328,14 +329,14 @@ export default function SessionViewer() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs mt-3">
-                <div>
-                  <span className="text-gray-500">Watched: </span>
-                  <span className="font-mono text-gray-400">{session.watchedWallet.slice(0, 10)}...</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
+                <div className="flex flex-col sm:flex-row gap-1">
+                  <span className="text-gray-500 flex-shrink-0">Watched: </span>
+                  <WalletAddress address={session.watchedWallet} short className="text-gray-400" />
                 </div>
-                <div>
-                  <span className="text-gray-500">Bot: </span>
-                  <span className="font-mono text-gray-400">{session.botWallet.slice(0, 10)}...</span>
+                <div className="flex flex-col sm:flex-row gap-1">
+                  <span className="text-gray-500 flex-shrink-0">Bot: </span>
+                  <WalletAddress address={session.botWallet} short className="text-gray-400" />
                 </div>
               </div>
 

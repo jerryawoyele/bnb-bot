@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Terminal, Trash2, Download } from 'lucide-react';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function LogsView({ socket }) {
   const [logs, setLogs] = useState([]);
@@ -8,14 +11,33 @@ export default function LogsView({ socket }) {
   const logsEndRef = useRef(null);
   const logsContainerRef = useRef(null);
 
+  // Fetch logs from API on mount
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/logs?limit=500`);
+        setLogs(response.data.logs || []);
+        // Scroll to bottom after loading
+        setTimeout(() => {
+          if (logsEndRef.current) {
+            logsEndRef.current.scrollIntoView({ behavior: 'auto' });
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Failed to fetch logs:', error);
+      }
+    };
+    
+    fetchLogs();
+  }, []);
+
   useEffect(() => {
     if (!socket) return;
 
-    // Listen for initial logs from database
+    // Listen for initial logs from database (for when bot starts)
     socket.on('initialLogs', (initialLogs) => {
       console.log(`📥 Loaded ${initialLogs.length} logs from database`);
       setLogs(initialLogs);
-      // Scroll to bottom after loading initial logs
       setTimeout(() => {
         if (logsEndRef.current) {
           logsEndRef.current.scrollIntoView({ behavior: 'auto' });

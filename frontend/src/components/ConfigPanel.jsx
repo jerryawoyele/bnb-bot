@@ -1,7 +1,11 @@
-import { Settings, Shield, Zap, DollarSign, Filter as FilterIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Settings, Shield, Zap, DollarSign, Filter as FilterIcon, Edit } from 'lucide-react';
+import ConfigEditor from './ConfigEditor';
 
-export default function ConfigPanel({ config }) {
-  if (!config) return null;
+export default function ConfigPanel({ config, onConfigUpdated }) {
+  const [showEditor, setShowEditor] = useState(false);
+  
+  if (!config) return <div className="card"><p className="text-gray-400">Loading configuration...</p></div>;
 
   const configSections = [
     {
@@ -42,12 +46,28 @@ export default function ConfigPanel({ config }) {
     }
   ];
 
+  const handleConfigSaved = (newConfig) => {
+    if (onConfigUpdated) {
+      onConfigUpdated(newConfig);
+    }
+  };
+
   return (
-    <div className="card">
-      <div className="flex items-center space-x-2 mb-6">
-        <Settings className="w-6 h-6 text-primary" />
-        <h2 className="text-xl font-bold">Configuration</h2>
-      </div>
+    <>
+      <div className="card">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <Settings className="w-6 h-6 text-primary" />
+            <h2 className="text-xl font-bold">Configuration</h2>
+          </div>
+          <button
+            onClick={() => setShowEditor(true)}
+            className="btn btn-primary"
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit Config
+          </button>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {configSections.map((section) => (
@@ -77,11 +97,20 @@ export default function ConfigPanel({ config }) {
         ))}
       </div>
 
-      <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-        <p className="text-sm text-yellow-400">
-          <strong>Note:</strong> Configuration changes require bot restart. Please update your .env file and restart the bot.
-        </p>
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-sm text-blue-400">
+            <strong>Info:</strong> Configuration is stored in MongoDB and persists across all sessions.
+          </p>
+        </div>
       </div>
-    </div>
+
+      {showEditor && (
+        <ConfigEditor
+          config={config}
+          onClose={() => setShowEditor(false)}
+          onSaved={handleConfigSaved}
+        />
+      )}
+    </>
   );
 }

@@ -15,7 +15,7 @@ import { Activity, Play, Square } from 'lucide-react';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('control');
+  const [activeTab, setActiveTab] = useState(null); // null until bot status is known
   const [status, setStatus] = useState(null);
   const [botStatus, setBotStatus] = useState(null);
   const [stats, setStats] = useState(null);
@@ -79,10 +79,19 @@ function App() {
         axios.get(`${API_URL}/api/config`)
       ]);
 
-      setBotStatus(botStatusRes.data);
+      const botStatusData = botStatusRes.data;
+      setBotStatus(botStatusData);
       setStats(statsRes.data);
       setPositions(positionsRes.data);
       setConfig(configRes.data);
+      
+      // Set default tab based on bot status (only if not already set)
+      setActiveTab(prev => {
+        if (prev === null) {
+          return botStatusData.isRunning ? 'home' : 'control';
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Failed to fetch initial data:', error);
     }
@@ -263,7 +272,10 @@ function App() {
 
         {/* Config Tab */}
         <div className={activeTab === 'config' ? 'block' : 'hidden'}>
-          <ConfigPanel config={config} />
+          <ConfigPanel 
+            config={config} 
+            onConfigUpdated={(newConfig) => setConfig(newConfig)}
+          />
         </div>
 
         {/* Logs Tab */}

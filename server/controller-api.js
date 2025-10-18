@@ -231,11 +231,26 @@ export class ControllerAPI extends EventEmitter {
     });
 
     // Get config
-    this.app.get('/api/config', (req, res) => {
-      res.json({
-        triggerWallet: this.botController.triggerWallet,
-        // Add other config as needed
-      });
+    this.app.get('/api/config', async (req, res) => {
+      try {
+        const config = await this.database.getConfig();
+        res.json({
+          triggerWallet: this.botController.triggerWallet,
+          ...config
+        });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Update config
+    this.app.put('/api/config', async (req, res) => {
+      try {
+        const updatedConfig = await this.database.updateConfig(req.body);
+        res.json({ success: true, config: updatedConfig });
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
     });
   }
 
