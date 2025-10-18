@@ -28,6 +28,18 @@ async function main() {
     logger.info('🔧 Validating configuration...');
     validateConfig();
     logger.info('✅ Configuration valid');
+    
+    // Check if START_WATCHED is set
+    if (!config.startWatched) {
+      logger.error('⚠️  START_WATCHED is not configured');
+      logger.info('');
+      logger.info('This is the OLD auto-start mode.');
+      logger.info('For better control, use the NEW controller mode:');
+      logger.info('  npm start  (runs main-controller.js)');
+      logger.info('');
+      logger.info('Or set START_WATCHED in your .env file to use this mode.');
+      process.exit(1);
+    }
 
     // Connect to WebSocket provider
     logger.info('🌐 Connecting to BSC WebSocket...');

@@ -13,7 +13,7 @@ export class WalletTracker extends EventEmitter {
     super();
     this.provider = provider;
     this.wallet = wallet;
-    this.watchedWallet = config.startWatched.toLowerCase();
+    this.watchedWallet = config.startWatched ? config.startWatched.toLowerCase() : null;
     this.decoder = new TransactionDecoder();
     this.filter = new TradeFilter(provider);
     this.executor = new TradeExecutor(wallet, provider);
@@ -36,6 +36,12 @@ export class WalletTracker extends EventEmitter {
    * Start monitoring the blockchain for transactions
    */
   async start() {
+    if (!this.watchedWallet) {
+      logger.error('Cannot start tracker: No watched wallet configured');
+      logger.info('Please set START_WATCHED in .env or use controller mode');
+      throw new Error('No watched wallet configured');
+    }
+    
     logger.info('🚀 Starting BNB Copy-Trading Bot');
     logger.info(`👀 Watching wallet: ${this.watchedWallet}`);
     logger.info(`🤖 Bot wallet: ${this.wallet.address}`);
