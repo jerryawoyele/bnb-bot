@@ -349,7 +349,8 @@ export class WalletTracker extends EventEmitter {
       const activeConfig = await this.filter.getConfig();
       
       if (!activeConfig.autoFollowEnabled) {
-        logger.debug('Auto-follow disabled, ignoring BNB transfer');
+        logger.info('⚠️  Auto-follow disabled - BNB transfer detected but not switching wallets');
+        logger.info(`   Transfer: ${analysis.valueInBnb} BNB to ${analysis.to}`);
         return;
       }
 
@@ -361,11 +362,16 @@ export class WalletTracker extends EventEmitter {
       const transferAmountBnb = analysis.valueInBnb;
       const newWallet = analysis.to;
       
-      logger.info(`💸 BNB transfer detected: ${transferAmountBnb} BNB to ${newWallet}`);
+      logger.info(`\n💸 BNB TRANSFER DETECTED`);
+      logger.info(`   Amount: ${transferAmountBnb} BNB`);
+      logger.info(`   From: ${analysis.from}`);
+      logger.info(`   To: ${newWallet}`);
+      logger.info(`   Tx Hash: ${tx.hash}`);
+      logger.info(`   Threshold: ${activeConfig.minTransferAmountBnb} BNB`);
       
       // Check if transfer meets minimum threshold
       if (transferAmountBnb >= activeConfig.minTransferAmountBnb && newWallet) {
-        logger.info(`✅ Transfer amount ${transferAmountBnb} BNB meets threshold ${activeConfig.minTransferAmountBnb} BNB`);
+        logger.info(`   ✅ Amount meets threshold - Switching wallets!`);
         await this.switchWatchedWallet(
           newWallet.toLowerCase(),
           `BNB transfer of ${transferAmountBnb} BNB detected`
@@ -375,7 +381,8 @@ export class WalletTracker extends EventEmitter {
         this.boughtTokens.clear();
         logger.info('🔄 Cleared bought tokens list for new wallet');
       } else {
-        logger.debug(`Transfer amount ${transferAmountBnb} BNB below threshold ${activeConfig.minTransferAmountBnb} BNB - not switching`);
+        logger.info(`   ❌ Amount below threshold - Not switching wallets`);
+        logger.info(`   (Transfer: ${transferAmountBnb} BNB < Threshold: ${activeConfig.minTransferAmountBnb} BNB)\n`);
       }
     } catch (error) {
       logger.error('Error handling BNB transfer:', error);

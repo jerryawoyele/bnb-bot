@@ -349,7 +349,7 @@ function App() {
 
         {/* Sessions Tab */}
         <div className={activeTab === 'sessions' ? 'block' : 'hidden'}>
-          <SessionViewer />
+          <SessionViewer socket={socket} />
         </div>
 
         {/* Config Tab */}

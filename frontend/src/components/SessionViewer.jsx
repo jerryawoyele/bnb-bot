@@ -5,7 +5,7 @@ import WalletAddress from './WalletAddress';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-export default function SessionViewer() {
+export default function SessionViewer({ socket }) {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionData, setSessionData] = useState(null);
@@ -16,7 +16,52 @@ export default function SessionViewer() {
 
   useEffect(() => {
     fetchSessions();
+    
+    // Set up auto-refresh every 5 seconds
+    const intervalId = setInterval(() => {
+      fetchSessions();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
   }, []);
+  
+  // Real-time updates via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Listen for trade events to update sessions
+    const handleTrade = () => {
+      console.log('🔄 Trade event - Refreshing sessions');
+      fetchSessions();
+    };
+    
+    // Listen for wallet switches
+    const handleWalletSwitch = () => {
+      console.log('🔄 Wallet switch - Refreshing sessions');
+      fetchSessions();
+    };
+    
+    // Listen for bot status changes (start/stop)
+    const handleBotStatus = (data) => {
+      console.log('🔄 Bot status changed - Refreshing sessions');
+      fetchSessions();
+      
+      // If bot stopped and we're viewing that session, refresh details
+      if (selectedSession && !data.isRunning) {
+        fetchSessionDetails(selectedSession);
+      }
+    };
+    
+    socket.on('trade', handleTrade);
+    socket.on('walletSwitch', handleWalletSwitch);
+    socket.on('botStatus', handleBotStatus);
+    
+    return () => {
+      socket.off('trade', handleTrade);
+      socket.off('walletSwitch', handleWalletSwitch);
+      socket.off('botStatus', handleBotStatus);
+    };
+  }, [socket, selectedSession]);
 
   const fetchSessions = async () => {
     try {
@@ -445,7 +490,6 @@ export default function SessionViewer() {
                 className="btn bg-red-600 hover:bg-red-700 text-white"
                 disabled={deleting}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
                 {deleting ? 'Deleting...' : 'Delete Session'}
               </button>
             </div>

@@ -14,16 +14,23 @@ export class TransactionDecoder {
   analyzeTransaction(tx) {
     try {
       // Check if this is a simple BNB transfer
+      // Covers: no data, 0x, or very short data (fallback functions)
+      const hasMinimalData = !tx.data || tx.data === '0x' || tx.data.length <= 10;
+      const hasValue = tx.value && tx.value > 0n;
+      
+      // If transaction has value and minimal/no data, it's likely a BNB transfer
+      if (hasValue && hasMinimalData) {
+        return {
+          type: 'BNB_TRANSFER',
+          from: tx.from,
+          to: tx.to,
+          value: tx.value,
+          valueInBnb: parseFloat(ethers.formatEther(tx.value)),
+        };
+      }
+      
+      // If no data at all, return UNKNOWN
       if (!tx.data || tx.data === '0x' || tx.data.length <= 10) {
-        if (tx.value && tx.value > 0n) {
-          return {
-            type: 'BNB_TRANSFER',
-            from: tx.from,
-            to: tx.to,
-            value: tx.value,
-            valueInBnb: parseFloat(ethers.formatEther(tx.value)),
-          };
-        }
         return { type: 'UNKNOWN' };
       }
 
