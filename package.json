@@ -2,7 +2,7 @@
   "name": "bnb-copy-trading-bot",
   "version": "1.0.0",
   "description": "Smart copy-trading bot for BNB Chain with auto-follow and filtering",
-  "main": "src/index.js",
+  "main": "src/main-controller.js",
   "type": "module",
   "scripts": {
     "start": "node src/main-controller.js",

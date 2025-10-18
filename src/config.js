@@ -73,11 +73,8 @@ export function validateConfig() {
     errors.push('PRIVATE_KEY is required');
   }
   
-  if (!config.startWatched) {
-    errors.push('START_WATCHED wallet address is required');
-  }
-  
-  if (!ethers.isAddress(config.startWatched)) {
+  // START_WATCHED is optional in controller mode
+  if (config.startWatched && !ethers.isAddress(config.startWatched)) {
     errors.push('START_WATCHED is not a valid Ethereum address');
   }
   
