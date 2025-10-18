@@ -9,16 +9,20 @@ import { ProfitTracker } from './profit-tracker.js';
 import { NotificationService } from './notifications.js';
 
 export class WalletTracker extends EventEmitter {
-  constructor(provider, wallet) {
+  constructor(provider, wallet, database = null) {
     super();
     this.provider = provider;
     this.wallet = wallet;
+    this.database = database;
     this.watchedWallet = config.startWatched ? config.startWatched.toLowerCase() : null;
     this.decoder = new TransactionDecoder();
-    this.filter = new TradeFilter(provider);
+    this.filter = new TradeFilter(provider, database);
     this.executor = new TradeExecutor(wallet, provider);
     this.profitTracker = new ProfitTracker(provider, wallet);
     this.notificationService = new NotificationService();
+    
+    // State
+    this.isPaused = false;
     
     // Stats
     this.stats = {
@@ -133,6 +137,12 @@ export class WalletTracker extends EventEmitter {
   async processTransaction(tx) {
     try {
       if (!tx || !tx.hash) {
+        return;
+      }
+
+      // Skip processing if paused
+      if (this.isPaused) {
+        logger.debug('Bot is paused, skipping transaction processing');
         return;
       }
 
@@ -424,5 +434,23 @@ export class WalletTracker extends EventEmitter {
     this.provider.removeAllListeners();
     this.printStats();
     logger.info('Bot stopped');
+  }
+
+  /**
+   * Pause monitoring (keep listeners but don't process transactions)
+   */
+  pause() {
+    logger.info('⏸️  Pausing bot monitoring...');
+    this.isPaused = true;
+    logger.info('Bot paused - Will not process new transactions');
+  }
+
+  /**
+   * Resume monitoring
+   */
+  resume() {
+    logger.info('▶️  Resuming bot monitoring...');
+    this.isPaused = false;
+    logger.info('Bot resumed - Processing transactions');
   }
 }

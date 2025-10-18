@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Play, Square, Zap, Wallet } from 'lucide-react';
 import WalletAddress from './WalletAddress';
+import PasswordModal from './PasswordModal';
 
 export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) {
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [passwordModal, setPasswordModal] = useState(null); // 'start' or 'stop'
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const isRunning = botStatus?.isRunning || false;
   const isDetecting = botStatus?.mode === 'detecting';
   const isTracking = botStatus?.mode === 'tracking';
 
-  const handleStartManual = async () => {
+  const handleStartClick = () => {
     if (!walletAddress) {
       setError('Please enter a wallet address');
       return;
@@ -22,16 +25,22 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
       return;
     }
 
-    setLoading(true);
+    setPasswordModal('start');
+  };
+
+  const handleStartConfirm = async (password) => {
+    setPasswordLoading(true);
     setError('');
 
     try {
-      await onStart(walletAddress);
+      await onStart(walletAddress, password);
       setWalletAddress('');
+      setPasswordModal(null);
     } catch (err) {
       setError(err.message || 'Failed to start bot');
+      throw err;
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
@@ -48,16 +57,22 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
     }
   };
 
-  const handleStop = async () => {
-    setLoading(true);
+  const handleStopClick = () => {
+    setPasswordModal('stop');
+  };
+
+  const handleStopConfirm = async (password) => {
+    setPasswordLoading(true);
     setError('');
 
     try {
-      await onStop();
+      await onStop(password);
+      setPasswordModal(null);
     } catch (err) {
       setError(err.message || 'Failed to stop bot');
+      throw err;
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
@@ -125,7 +140,7 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
               />
             </div>
             <button
-              onClick={handleStartManual}
+              onClick={handleStartClick}
               disabled={loading || !walletAddress}
               className="btn btn-primary w-full"
             >
@@ -147,7 +162,7 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
       ) : (
         <div className="space-y-3">
           <button
-            onClick={handleStop}
+            onClick={handleStopClick}
             disabled={loading}
             className="btn btn-danger w-full"
           >
@@ -161,6 +176,15 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
           </div>
         </div>
       )}
+
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={passwordModal !== null}
+        onClose={() => setPasswordModal(null)}
+        onConfirm={passwordModal === 'start' ? handleStartConfirm : handleStopConfirm}
+        action={passwordModal === 'start' ? 'start the bot' : 'stop the bot'}
+        loading={passwordLoading}
+      />
     </div>
   );
 }

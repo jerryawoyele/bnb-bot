@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, Target, Zap, Clock, Edit2, Check, X } from 'lucide-react';
+import WalletAddress from './WalletAddress';
 
 export default function StatusCard({ status, config, onChangeWallet }) {
   const [editing, setEditing] = useState(false);
@@ -93,9 +94,7 @@ export default function StatusCard({ status, config, onChangeWallet }) {
               </div>
             </form>
           ) : (
-            <p className="font-mono text-sm break-all">
-              {status.watchedWallet?.slice(0, 10)}...{status.watchedWallet?.slice(-8)}
-            </p>
+            <WalletAddress address={status.watchedWallet} className="text-sm" />
           )}
         </div>
 

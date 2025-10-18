@@ -8,8 +8,9 @@ import {
 } from './abis.js';
 
 export class TradeFilter {
-  constructor(provider) {
+  constructor(provider, database = null) {
     this.provider = provider;
+    this.database = database;
     this.factoryAddress = '0xBCfCcbde45cE874adCB698cC183deBcF17952812'; // PancakeSwap v2 Factory
     this.factory = new ethers.Contract(
       this.factoryAddress,
@@ -20,6 +21,37 @@ export class TradeFilter {
     this.bnbPriceLastUpdate = 0;
     // BUSD address for price oracle
     this.busdAddress = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56';
+    this.configCache = null;
+    this.configLastUpdate = 0;
+  }
+
+  /**
+   * Get config from MongoDB or fall back to static config
+   */
+  async getConfig() {
+    const now = Date.now();
+    
+    // Return cached config if less than 10 seconds old
+    if (this.configCache && (now - this.configLastUpdate) < 10000) {
+      return this.configCache;
+    }
+
+    // Try to get from MongoDB
+    if (this.database) {
+      try {
+        const dbConfig = await this.database.getConfig();
+        if (dbConfig) {
+          this.configCache = dbConfig;
+          this.configLastUpdate = now;
+          return dbConfig;
+        }
+      } catch (error) {
+        logger.warn('Failed to get config from MongoDB, using static config:', error.message);
+      }
+    }
+
+    // Fall back to static config
+    return config;
   }
 
   /**

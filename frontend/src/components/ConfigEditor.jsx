@@ -327,7 +327,6 @@ export default function ConfigEditor({ config, onClose, onSaved }) {
             className="btn btn-primary"
             disabled={saving}
           >
-            <Save className="w-4 h-4 mr-2" />
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
         </div>

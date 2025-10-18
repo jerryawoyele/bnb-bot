@@ -74,12 +74,20 @@ export class ControllerAPI extends EventEmitter {
     // Start bot with specific wallet
     this.app.post('/api/bot/start', async (req, res) => {
       try {
-        const { walletAddress } = req.body;
+        const { walletAddress, password } = req.body;
         
         if (!walletAddress) {
           return res.status(400).json({ 
             success: false, 
             message: 'walletAddress is required' 
+          });
+        }
+
+        // Verify password
+        if (!password || password !== process.env.BOT_PASSWORD) {
+          return res.status(401).json({ 
+            success: false, 
+            message: 'Invalid password' 
           });
         }
 
@@ -93,7 +101,37 @@ export class ControllerAPI extends EventEmitter {
     // Stop bot
     this.app.post('/api/bot/stop', async (req, res) => {
       try {
+        const { password } = req.body;
+
+        // Verify password
+        if (!password || password !== process.env.BOT_PASSWORD) {
+          return res.status(401).json({ 
+            success: false, 
+            message: 'Invalid password' 
+          });
+        }
+
         const result = await this.botController.stop();
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
+
+    // Pause bot
+    this.app.post('/api/bot/pause', async (req, res) => {
+      try {
+        const result = await this.botController.pause();
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
+
+    // Resume bot
+    this.app.post('/api/bot/resume', async (req, res) => {
+      try {
+        const result = await this.botController.resume();
         res.json(result);
       } catch (error) {
         res.status(500).json({ success: false, message: error.message });

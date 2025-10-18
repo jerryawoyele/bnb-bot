@@ -124,9 +124,9 @@ function App() {
     window.history.replaceState({}, '', url);
   };
 
-  const handleStartBot = async (walletAddress) => {
+  const handleStartBot = async (walletAddress, password) => {
     try {
-      const response = await axios.post(`${API_URL}/api/bot/start`, { walletAddress });
+      const response = await axios.post(`${API_URL}/api/bot/start`, { walletAddress, password });
       if (response.data.success) {
         await fetchInitialData();
       }
@@ -150,15 +150,41 @@ function App() {
     }
   };
 
-  const handleStopBot = async () => {
+  const handleStopBot = async (password) => {
     try {
-      const response = await axios.post(`${API_URL}/api/bot/stop`);
+      const response = await axios.post(`${API_URL}/api/bot/stop`, { password });
       if (response.data.success) {
         await fetchInitialData();
       }
       return response.data;
     } catch (error) {
       console.error('Failed to stop bot:', error);
+      throw error;
+    }
+  };
+
+  const handlePauseBot = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/api/bot/pause`);
+      if (response.data.success) {
+        await fetchInitialData();
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Failed to pause bot:', error);
+      throw error;
+    }
+  };
+
+  const handleResumeBot = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/api/bot/resume`);
+      if (response.data.success) {
+        await fetchInitialData();
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Failed to resume bot:', error);
       throw error;
     }
   };
@@ -241,34 +267,33 @@ function App() {
         <div className={activeTab === 'home' ? 'block' : 'hidden'}>
           <div className="grid grid-cols-1 gap-6">
             {/* Bot Status Banner */}
-            {botStatus && (
+            {botStatus && botStatus.isRunning && botStatus.watchedWallet && (
               <div className={`p-4 rounded-lg border-2 ${
-                botStatus.isRunning 
-                  ? 'bg-success/10 border-success/50' 
-                  : 'bg-warning/10 border-warning/50'
+                botStatus.isPaused
+                  ? 'bg-warning/10 border-warning/50' 
+                  : 'bg-success/10 border-success/50'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {botStatus.isRunning ? (
-                      <Play className="w-6 h-6 text-success" />
-                    ) : (
+                    {botStatus.isPaused ? (
                       <Square className="w-6 h-6 text-warning" />
+                    ) : (
+                      <Play className="w-6 h-6 text-success" />
                     )}
                     <div>
                       <p className="font-bold">
-                        {botStatus.isRunning ? '🟢 Bot Active' : '🟡 Bot Stopped'}
+                        {botStatus.isPaused ? '⏸️ Bot Paused' : '🟢 Bot Active'}
                       </p>
                       <p className="text-sm text-gray-400">
-                        {botStatus.mode === 'detecting' && '🔍 Detecting wallet...'}
-                        {botStatus.mode === 'tracking' && `📊 Tracking: ${botStatus.watchedWallet}`}
+                        {botStatus.isPaused ? 'Not processing transactions' : `📊 Tracking: ${botStatus.watchedWallet}`}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => changeTab('home')}
-                    className="btn btn-sm btn-primary"
+                    onClick={botStatus.isPaused ? handleResumeBot : handlePauseBot}
+                    className={`btn btn-sm ${botStatus.isPaused ? 'btn-success' : 'bg-warning hover:bg-yellow-600 text-black'}`}
                   >
-                    {botStatus.isRunning ? 'Stop Bot' : 'Start Bot'}
+                    {botStatus.isPaused ? '▶️ Resume Bot' : '⏸️ Pause Bot'}
                   </button>
                 </div>
               </div>

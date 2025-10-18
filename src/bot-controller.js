@@ -17,6 +17,7 @@ export class BotController {
     this.tracker = null;
     this.smartDetector = null;
     this.isRunning = false;
+    this.isPaused = false;
     this.watchedWallet = null;
     
     // Trigger wallet for smart detection
@@ -158,7 +159,7 @@ export class BotController {
       }
 
       // Initialize wallet tracker
-      this.tracker = new WalletTracker(this.provider, this.wallet);
+      this.tracker = new WalletTracker(this.provider, this.wallet, this.database);
       this.tracker.watchedWallet = this.watchedWallet;
 
       // Connect bot events to API
@@ -239,12 +240,89 @@ export class BotController {
     }
   }
 
+  async pause() {
+    if (!this.isRunning) {
+      return { success: false, message: 'Bot is not running' };
+    }
+
+    if (this.isPaused) {
+      return { success: false, message: 'Bot is already paused' };
+    }
+
+    try {
+      logger.info('⏸️  Pausing bot...');
+
+      // Pause tracker
+      if (this.tracker) {
+        await this.tracker.pause();
+      }
+
+      this.isPaused = true;
+      logger.info('✅ Bot paused successfully');
+
+      // Notify via API
+      if (this.api) {
+        this.api.io.emit('botStatus', {
+          running: this.isRunning,
+          paused: this.isPaused,
+          mode: 'paused',
+          watchedWallet: this.watchedWallet,
+          botWallet: this.wallet.address
+        });
+      }
+
+      return { success: true, message: 'Bot paused successfully' };
+    } catch (error) {
+      logger.error('Failed to pause bot:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  async resume() {
+    if (!this.isRunning) {
+      return { success: false, message: 'Bot is not running' };
+    }
+
+    if (!this.isPaused) {
+      return { success: false, message: 'Bot is not paused' };
+    }
+
+    try {
+      logger.info('▶️  Resuming bot...');
+
+      // Resume tracker
+      if (this.tracker) {
+        await this.tracker.resume();
+      }
+
+      this.isPaused = false;
+      logger.info('✅ Bot resumed successfully');
+
+      // Notify via API
+      if (this.api) {
+        this.api.io.emit('botStatus', {
+          running: this.isRunning,
+          paused: this.isPaused,
+          mode: 'tracking',
+          watchedWallet: this.watchedWallet,
+          botWallet: this.wallet.address
+        });
+      }
+
+      return { success: true, message: 'Bot resumed successfully' };
+    } catch (error) {
+      logger.error('Failed to resume bot:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
   getStatus() {
     return {
       isRunning: this.isRunning,
+      isPaused: this.isPaused,
       watchedWallet: this.watchedWallet,
       botWallet: this.wallet?.address || null,
-      mode: this.smartDetector ? 'detecting' : (this.tracker ? 'tracking' : 'stopped'),
+      mode: this.isPaused ? 'paused' : (this.smartDetector ? 'detecting' : (this.tracker ? 'tracking' : 'stopped')),
       triggerWallet: this.triggerWallet
     };
   }
