@@ -24,6 +24,9 @@ export class WalletTracker extends EventEmitter {
     // State
     this.isPaused = false;
     
+    // Track tokens we've already bought (for one-time buy per token)
+    this.boughtTokens = new Set();
+    
     // Stats
     this.stats = {
       totalTransactions: 0,
@@ -33,6 +36,7 @@ export class WalletTracker extends EventEmitter {
       tradesFiltered: 0,
       walletSwitches: 0,
       takeProfitExecuted: 0,
+      skippedDuplicateBuys: 0,
     };
   }
 
@@ -148,14 +152,27 @@ export class WalletTracker extends EventEmitter {
       }
 
       this.stats.totalTransactions++;
-      logger.info(`\n📡 Detected transaction from watched wallet: ${tx.hash}`);
 
       // Analyze transaction
       const analysis = this.decoder.analyzeTransaction(tx);
+      
+      // FILTER OUT UNWANTED TRANSACTIONS EARLY
+      // Only care about: SWAPS (buys/sells) and BNB_TRANSFER (for wallet switching)
+      // Skip: token transfers, approvals, creates, etc.
+      if (analysis.type === 'TOKEN_TRANSFER' || 
+          analysis.type === 'UNKNOWN' || 
+          analysis.type === 'ERROR' ||
+          analysis.type === 'APPROVE') {
+        logger.debug(`⏭️  Skipping ${analysis.type} transaction`);
+        return;
+      }
+
+      // Log relevant transactions only
+      logger.info(`\n📡 Detected ${analysis.type} from watched wallet: ${tx.hash}`);
       logger.debug('Transaction analysis:', analysis);
 
-      // Send watch alert for ALL transactions except token transfers
-      if (analysis.type !== 'TOKEN_TRANSFER' && analysis.type !== 'UNKNOWN' && analysis.type !== 'ERROR') {
+      // Send watch alert for important transactions
+      if (analysis.type === 'SWAP' || analysis.type === 'BNB_TRANSFER') {
         const value = analysis.valueInBnb || 0;
         await this.notificationService.notifyWatchAlert(
           tx.hash,
@@ -167,13 +184,12 @@ export class WalletTracker extends EventEmitter {
         );
       }
 
-      // Handle different transaction types
+      // Handle transaction types
       if (this.decoder.isSwapTransaction(analysis)) {
         await this.handleSwapTransaction(analysis, tx);
-      } else if (this.decoder.isTransferTransaction(analysis)) {
-        await this.handleTransferTransaction(analysis, tx);
-      } else {
-        logger.debug('Transaction type not relevant for copy trading');
+      } else if (analysis.type === 'BNB_TRANSFER') {
+        // Only handle BNB transfers for wallet switching
+        await this.handleBnbTransfer(analysis, tx);
       }
     } catch (error) {
       logger.error('Error processing transaction:', error);
@@ -196,26 +212,36 @@ export class WalletTracker extends EventEmitter {
         logger.info(`   Amount: ${analysis.amountInBnb} BNB`);
       }
 
+      // Get active config
+      const activeConfig = await this.filter.getConfig();
+
       // BUY ONLY MODE: Skip sell trades
-      if (config.copyBuyOnly && analysis.swapType === 'SELL') {
+      if (activeConfig.copyBuyOnly && analysis.swapType === 'SELL') {
         logger.info('⏭️  Skipping SELL trade (BUY ONLY mode enabled)');
         return;
       }
 
       // If sell copying is disabled, skip
-      if (!config.copySell && analysis.swapType === 'SELL') {
+      if (!activeConfig.copySell && analysis.swapType === 'SELL') {
         logger.info('⏭️  Skipping SELL trade (COPY_SELL disabled)');
         return;
       }
 
-      // ONE-TIME BUY CHECK: Skip if already bought this token
-      if (config.oneTimeBuyPerToken && analysis.swapType === 'BUY') {
-        const tokenAddress = analysis.tokenOut;
-        if (this.profitTracker.hasAlreadyBought(tokenAddress)) {
-          logger.info(`⏭️  Already bought ${tokenAddress}, skipping (one-time buy rule)`);
-          this.stats.tradesFiltered++;
+      // ONE-TIME BUY PER TOKEN: Check BEFORE filters for maximum speed
+      // Skip if we've already bought this token (first buy only rule)
+      if (analysis.swapType === 'BUY') {
+        const tokenAddress = (analysis.tokenOut || '').toLowerCase();
+        
+        if (this.boughtTokens.has(tokenAddress)) {
+          logger.info(`⏭️  Already bought ${tokenAddress} once, skipping duplicate buy`);
+          logger.info('   ℹ️  Bot only buys each token on FIRST watched wallet purchase');
+          this.stats.skippedDuplicateBuys++;
           return;
         }
+        
+        // Mark token as being bought (before execution to prevent race conditions)
+        this.boughtTokens.add(tokenAddress);
+        logger.info(`✅ First time buying ${tokenAddress} - proceeding with copy trade!`);
       }
 
       // Apply filters
@@ -316,41 +342,45 @@ export class WalletTracker extends EventEmitter {
   }
 
   /**
-   * Handle transfer transaction (potential wallet switch)
+   * Handle BNB transfer (for wallet switching only)
+   * ONLY BNB transfers trigger wallet switching, not token transfers
    */
-  async handleTransferTransaction(analysis, tx) {
+  async handleBnbTransfer(analysis, tx) {
     try {
-      if (!config.autoFollowEnabled) {
-        logger.debug('Auto-follow disabled, ignoring transfer');
+      // Get active config
+      const activeConfig = await this.filter.getConfig();
+      
+      if (!activeConfig.autoFollowEnabled) {
+        logger.debug('Auto-follow disabled, ignoring BNB transfer');
         return;
       }
 
-      let transferAmountBnb = 0;
-      let newWallet = null;
-
-      if (analysis.type === 'BNB_TRANSFER') {
-        transferAmountBnb = analysis.valueInBnb;
-        newWallet = analysis.to;
-        logger.info(`💸 BNB transfer detected: ${transferAmountBnb} BNB to ${newWallet}`);
-      } else if (analysis.type === 'TOKEN_TRANSFER') {
-        // For token transfers, we'll switch if it's a significant transfer
-        newWallet = analysis.to;
-        logger.info(`🪙 Token transfer detected to ${newWallet}`);
-        // You could add logic here to check token value in BNB terms
-        transferAmountBnb = config.minTransferAmountBnb; // Assume it meets threshold
+      // Must be BNB_TRANSFER type
+      if (analysis.type !== 'BNB_TRANSFER') {
+        return;
       }
 
+      const transferAmountBnb = analysis.valueInBnb;
+      const newWallet = analysis.to;
+      
+      logger.info(`💸 BNB transfer detected: ${transferAmountBnb} BNB to ${newWallet}`);
+      
       // Check if transfer meets minimum threshold
-      if (transferAmountBnb >= config.minTransferAmountBnb && newWallet) {
+      if (transferAmountBnb >= activeConfig.minTransferAmountBnb && newWallet) {
+        logger.info(`✅ Transfer amount ${transferAmountBnb} BNB meets threshold ${activeConfig.minTransferAmountBnb} BNB`);
         await this.switchWatchedWallet(
           newWallet.toLowerCase(),
-          `Transfer of ${transferAmountBnb} BNB detected`
+          `BNB transfer of ${transferAmountBnb} BNB detected`
         );
+        
+        // Clear bought tokens list when switching wallets
+        this.boughtTokens.clear();
+        logger.info('🔄 Cleared bought tokens list for new wallet');
       } else {
-        logger.debug(`Transfer amount ${transferAmountBnb} BNB below threshold ${config.minTransferAmountBnb} BNB`);
+        logger.debug(`Transfer amount ${transferAmountBnb} BNB below threshold ${activeConfig.minTransferAmountBnb} BNB - not switching`);
       }
     } catch (error) {
-      logger.error('Error handling transfer transaction:', error);
+      logger.error('Error handling BNB transfer:', error);
     }
   }
 
@@ -424,9 +454,11 @@ export class WalletTracker extends EventEmitter {
     logger.info(`   Trades Executed: ${this.stats.tradesExecuted}`);
     logger.info(`   Trades Failed: ${this.stats.tradesFailed}`);
     logger.info(`   Trades Filtered: ${this.stats.tradesFiltered}`);
+    logger.info(`   Duplicate Buys Skipped: ${this.stats.skippedDuplicateBuys}`);
     logger.info(`   Take Profits Executed: ${this.stats.takeProfitExecuted}`);
     logger.info(`   Wallet Switches: ${this.stats.walletSwitches}`);
     logger.info(`   Open Positions: ${this.profitTracker.getPositionCount()}`);
+    logger.info(`   Unique Tokens Bought: ${this.boughtTokens.size}`);
     logger.info(`   Currently Watching: ${this.watchedWallet}\n`);
   }
 

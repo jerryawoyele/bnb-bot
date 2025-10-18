@@ -41,6 +41,16 @@ export class TransactionDecoder {
         return this.decodeTokenTransfer(tx);
       }
 
+      // Check if this is an approve transaction (ERC20 approve)
+      if (signature.toLowerCase() === '0x095ea7b3') {
+        return {
+          type: 'APPROVE',
+          from: tx.from,
+          to: tx.to,
+          signature,
+        };
+      }
+
       return { type: 'UNKNOWN', signature };
     } catch (error) {
       logger.error('Error analyzing transaction:', error);
