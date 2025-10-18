@@ -75,6 +75,32 @@ function App() {
       setStatus((prev) => prev ? { ...prev, balance } : null);
     });
 
+    // Listen for wallet switches
+    newSocket.on('walletSwitch', (data) => {
+      console.log('🔄 WALLET SWITCHED!');
+      console.log(`   Old: ${data.oldWallet}`);
+      console.log(`   New: ${data.newWallet}`);
+      console.log(`   Reason: ${data.reason}`);
+      
+      // Update bot status with new watched wallet across entire UI
+      setBotStatus((prev) => ({
+        ...prev,
+        watchedWallet: data.newWallet
+      }));
+      
+      // Show prominent notification
+      const message = `🔄 Wallet Switch Detected!\n\nNow watching: ${data.newWallet}\n\n${data.reason}`;
+      console.warn(message);
+      
+      // Optional: Show browser notification if permission granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Bot Wallet Switched', {
+          body: `Now watching: ${data.newWallet.slice(0, 10)}...`,
+          icon: '/favicon.ico'
+        });
+      }
+    });
+
     return () => {
       newSocket.close();
     };

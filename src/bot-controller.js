@@ -167,6 +167,21 @@ export class BotController {
         this.tracker.on('trade', (trade) => this.api.emitTrade(trade));
         this.tracker.on('transaction', (tx) => this.api.emitTransaction(tx));
         this.tracker.on('takeProfit', (data) => this.api.emitTakeProfit(data));
+        this.tracker.on('walletSwitch', (data) => {
+          logger.info('📡 Broadcasting wallet switch to all clients');
+          // Update controller's watched wallet reference
+          this.watchedWallet = data.newWallet;
+          // Broadcast wallet switch event
+          this.api.io.emit('walletSwitch', data);
+          // Also update bot status with new wallet
+          this.api.io.emit('botStatus', {
+            running: this.isRunning,
+            paused: this.isPaused,
+            mode: 'tracking',
+            watchedWallet: data.newWallet,
+            botWallet: this.wallet.address
+          });
+        });
       }
 
       // Start the tracker

@@ -405,7 +405,19 @@ export class WalletTracker extends EventEmitter {
     this.watchedWallet = newWallet.toLowerCase();
     this.stats.walletSwitches++;
     
-    logger.walletSwitch(oldWallet, newWallet, reason);
+    logger.info(`\n🔄 WALLET SWITCH`);
+    logger.info(`   Old Wallet: ${oldWallet}`);
+    logger.info(`   New Wallet: ${newWallet}`);
+    logger.info(`   Reason: ${reason}`);
+    logger.info(`   Bot will now copy trades from new wallet\n`);
+    
+    // Emit wallet switch event for API/WebSocket
+    this.emit('walletSwitch', {
+      oldWallet,
+      newWallet: this.watchedWallet,
+      reason,
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**
