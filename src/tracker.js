@@ -416,6 +416,21 @@ export class WalletTracker extends EventEmitter {
       reason,
       timestamp: new Date().toISOString()
     });
+    
+    // Display watching configuration after switch
+    logger.info('👀 Now Watching:');
+    logger.info(`   Watched wallet: ${this.watchedWallet}`);
+    logger.info(`   Bot wallet: ${this.wallet.address}`);
+    
+    // Get and display current balance
+    const balance = await this.provider.getBalance(this.wallet.address);
+    const balanceBnb = parseFloat(ethers.formatEther(balance));
+    logger.info(`   Bot balance: ${balanceBnb.toFixed(4)} BNB`);
+    
+    // Display current configuration
+    await this.printConfig();
+    
+    logger.info('✅ Bot is monitoring the new wallet...');
   }
 
   /**

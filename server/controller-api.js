@@ -151,11 +151,16 @@ export class ControllerAPI extends EventEmitter {
       }
     });
 
-    // Get current session
+    // Get current session (only if active)
     this.app.get('/api/sessions/current', async (req, res) => {
       try {
         const session = await this.database.getCurrentSession();
-        res.json({ session });
+        // Only return session if it's still active
+        if (session && session.status === 'active') {
+          res.json({ session });
+        } else {
+          res.json({ session: null });
+        }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }

@@ -10,6 +10,7 @@ import ConfigPanel from './components/ConfigPanel';
 import LogsView from './components/LogsView';
 import BotControl from './components/BotControl';
 import SessionViewer from './components/SessionViewer';
+import WalletSwitches from './components/WalletSwitches';
 import { Activity, Play, Square } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -325,6 +326,12 @@ function App() {
 
             {/* Stats Grid */}
             <StatsGrid stats={stats} />
+
+            {/* Wallet Switches Trail */}
+            <WalletSwitches 
+              socket={socket} 
+              currentWallet={botStatus?.watchedWallet}
+            />
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
