@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Play, Square, Zap, Wallet } from 'lucide-react';
+import WalletAddress from './WalletAddress';
 
 export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) {
   const [walletAddress, setWalletAddress] = useState('');
@@ -83,9 +84,9 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
 
             {isDetecting && (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Trigger Wallet:</span>
-                  <span className="text-xs font-mono">{botStatus?.triggerWallet}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <span className="text-gray-400 flex-shrink-0">Trigger Wallet:</span>
+                  <WalletAddress address={botStatus?.triggerWallet} className="text-xs" />
                 </div>
                 <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded text-sm text-yellow-400">
                   ⏱️ Monitoring for incoming transfer...
@@ -95,15 +96,15 @@ export default function BotControl({ botStatus, onStart, onStop, onStartAuto }) 
             )}
 
             {isTracking && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Watching:</span>
-                <span className="text-xs font-mono text-success">{botStatus?.watchedWallet}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span className="text-gray-400 flex-shrink-0">Watching:</span>
+                <WalletAddress address={botStatus?.watchedWallet} className="text-xs text-success" />
               </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Bot Wallet:</span>
-              <span className="text-xs font-mono">{botStatus?.botWallet}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-gray-400 flex-shrink-0">Bot Wallet:</span>
+              <WalletAddress address={botStatus?.botWallet} className="text-xs" />
             </div>
           </div>
         </div>

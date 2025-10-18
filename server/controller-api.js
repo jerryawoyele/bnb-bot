@@ -313,13 +313,23 @@ export class ControllerAPI extends EventEmitter {
 
   // ============ REAL-TIME BROADCASTS ============
 
-  emitLog(level, message, data) {
-    this.io.emit('log', {
+  async emitLog(level, message, data) {
+    const logEntry = {
       level,
       message,
       data,
       timestamp: new Date().toISOString()
-    });
+    };
+    
+    // Broadcast to WebSocket clients
+    this.io.emit('log', logEntry);
+    
+    // Persist to MongoDB immediately
+    try {
+      await this.database.insertLog(level, message, data);
+    } catch (error) {
+      console.error('Failed to persist log to MongoDB:', error.message);
+    }
   }
 
   emitTrade(trade) {

@@ -65,7 +65,6 @@ export default function ConfigPanel({ config, onConfigUpdated }) {
             className="btn btn-primary"
           >
             <Edit className="w-4 h-4 mr-2" />
-            Edit Config
           </button>
         </div>
 
