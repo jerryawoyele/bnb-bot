@@ -186,6 +186,17 @@ export class ControllerAPI extends EventEmitter {
       }
     });
 
+    // Delete session and all related data
+    this.app.delete('/api/sessions/:sessionId', async (req, res) => {
+      try {
+        const { sessionId } = req.params;
+        await this.database.deleteSession(sessionId);
+        res.json({ success: true, message: 'Session deleted successfully' });
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
     // ============ CURRENT SESSION DATA ============
     
     // Get current logs

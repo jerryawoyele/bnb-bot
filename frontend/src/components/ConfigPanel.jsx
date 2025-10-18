@@ -64,7 +64,7 @@ export default function ConfigPanel({ config, onConfigUpdated }) {
             onClick={() => setShowEditor(true)}
             className="btn btn-primary"
           >
-            <Edit className="w-4 h-4 mr-2" />
+            <Edit className="w-4 h-4" />
           </button>
         </div>
 

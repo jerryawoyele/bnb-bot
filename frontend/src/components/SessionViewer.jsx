@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { History, Calendar, Clock, TrendingUp, Eye, Download } from 'lucide-react';
+import { History, Calendar, Clock, TrendingUp, Eye, Download, Trash2, X } from 'lucide-react';
 import axios from 'axios';
 import WalletAddress from './WalletAddress';
 
@@ -11,6 +11,8 @@ export default function SessionViewer() {
   const [sessionData, setSessionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
+  const [deleteModal, setDeleteModal] = useState(null); // sessionId to delete
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchSessions();
@@ -64,6 +66,39 @@ export default function SessionViewer() {
     setViewMode('list');
     setSelectedSession(null);
     setSessionData(null);
+  };
+
+  const handleDeleteClick = (sessionId, e) => {
+    e.stopPropagation(); // Prevent triggering view action
+    setDeleteModal(sessionId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal) return;
+    
+    try {
+      setDeleting(true);
+      await axios.delete(`${API_URL}/api/sessions/${deleteModal}`);
+      
+      // Remove from list
+      setSessions(prev => prev.filter(s => s.sessionId !== deleteModal));
+      
+      // If viewing deleted session, go back to list
+      if (selectedSession === deleteModal) {
+        handleBackToList();
+      }
+      
+      setDeleteModal(null);
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      alert('Failed to delete session. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(null);
   };
 
   const formatDate = (dateString) => {
@@ -306,8 +341,7 @@ export default function SessionViewer() {
           {sessions.map((session) => (
             <div
               key={session.sessionId}
-              className="p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={() => handleViewSession(session)}
+              className="p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-primary/50 transition-colors"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
@@ -323,10 +357,20 @@ export default function SessionViewer() {
                     <span>Duration: {formatDuration(session.startTime, session.endTime)}</span>
                   </div>
                 </div>
-                <button className="btn btn-sm btn-primary">
-                  <Eye className="w-4 h-4 mr-1" />
-                  View
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    className="btn btn-sm btn-primary"
+                    onClick={() => handleViewSession(session)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button 
+                    className="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
+                    onClick={(e) => handleDeleteClick(session.sessionId, e)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
@@ -356,6 +400,56 @@ export default function SessionViewer() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-red-400">Delete Session</h3>
+              <button
+                onClick={handleDeleteCancel}
+                className="p-2 hover:bg-gray-700 rounded transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete this session? This will permanently remove:
+            </p>
+            
+            <ul className="text-sm text-gray-400 mb-6 space-y-2">
+              <li>• All logs from this session</li>
+              <li>• All trade records</li>
+              <li>• All position data</li>
+              <li>• Session statistics</li>
+            </ul>
+            
+            <p className="text-red-400 text-sm font-bold mb-6">
+              ⚠️ This action cannot be undone!
+            </p>
+            
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={handleDeleteCancel}
+                className="btn bg-gray-700 hover:bg-gray-600"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="btn bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleting ? 'Deleting...' : 'Delete Session'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -116,6 +116,37 @@ export class MongoDatabase {
     }
   }
 
+  async deleteSession(sessionId) {
+    try {
+      // Delete all data associated with this session
+      const [sessionResult, logsResult, tradesResult, positionsResult] = await Promise.all([
+        Session.deleteOne({ sessionId }),
+        Log.deleteMany({ sessionId }),
+        Trade.deleteMany({ sessionId }),
+        Position.deleteMany({ sessionId })
+      ]);
+
+      console.log(`✅ Deleted session ${sessionId}:`);
+      console.log(`   - Session: ${sessionResult.deletedCount}`);
+      console.log(`   - Logs: ${logsResult.deletedCount}`);
+      console.log(`   - Trades: ${tradesResult.deletedCount}`);
+      console.log(`   - Positions: ${positionsResult.deletedCount}`);
+
+      return {
+        success: true,
+        deleted: {
+          session: sessionResult.deletedCount,
+          logs: logsResult.deletedCount,
+          trades: tradesResult.deletedCount,
+          positions: positionsResult.deletedCount
+        }
+      };
+    } catch (error) {
+      console.error('Failed to delete session:', error.message);
+      throw error;
+    }
+  }
+
   async updateSessionStats(stats) {
     if (!this.currentSessionId) return;
 
