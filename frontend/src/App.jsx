@@ -82,12 +82,6 @@ function App() {
       console.log(`   New: ${data.newWallet}`);
       console.log(`   Reason: ${data.reason}`);
       
-      // Update bot status with new watched wallet across entire UI
-      setBotStatus((prev) => ({
-        ...prev,
-        watchedWallet: data.newWallet
-      }));
-      
       // Show prominent notification
       const message = `🔄 Wallet Switch Detected!\n\nNow watching: ${data.newWallet}\n\n${data.reason}`;
       console.warn(message);
@@ -99,6 +93,10 @@ function App() {
           icon: '/favicon.ico'
         });
       }
+      
+      // Refresh entire site data
+      console.log('🔄 Refreshing all data...');
+      fetchInitialData();
     });
 
     return () => {

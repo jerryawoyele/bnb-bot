@@ -9,18 +9,28 @@ export default function ConfigEditor({ config, onClose, onSaved }) {
     // Trading Mode
     copyBuyOnly: config?.copyBuyOnly ?? true,
     copySell: config?.copySell ?? false,
+    
+    // Take Profit Settings
     autoTakeProfitEnabled: config?.autoTakeProfitEnabled ?? true,
     takeProfitPercent: config?.takeProfitPercent ?? 100,
+    takeProfitBagPercent: config?.takeProfitBagPercent ?? 100,
     
-    // Risk Management
-    maxBuyAmountBnb: config?.maxBuyAmountBnb ?? 0.5,
-    slippagePercent: config?.slippagePercent ?? 2,
-    maxGasPriceGwei: config?.maxGasPriceGwei ?? 10,
-    minLiquidityUsd: config?.minLiquidityUsd ?? 10000,
-    maxTokenAgeHours: config?.maxTokenAgeHours ?? 72,
+    // Buy Amount
+    buyAmountBnb: config?.buyAmountBnb ?? config?.maxBuyAmountBnb ?? 0.01,
     
-    // Filters
-    oneTimeBuyPerToken: config?.oneTimeBuyPerToken ?? true,
+    // Gas Settings
+    buyGasGwei: config?.buyGasGwei ?? config?.maxGasPriceGwei ?? 10,
+    sellGasGwei: config?.sellGasGwei ?? config?.maxGasPriceGwei ?? 10,
+    
+    // Slippage Settings
+    buySlippagePercent: config?.buySlippagePercent ?? config?.slippagePercent ?? 2,
+    sellSlippagePercent: config?.sellSlippagePercent ?? config?.slippagePercent ?? 2,
+    
+    // Market Cap & Age Filters
+    maxMarketCapUsd: config?.maxMarketCapUsd ?? 0,
+    maxTokenAgeSeconds: config?.maxTokenAgeSeconds ?? (config?.maxTokenAgeHours ? config.maxTokenAgeHours * 3600 : 0),
+    
+    // Auto-Follow
     autoFollowEnabled: config?.autoFollowEnabled ?? true,
     minTransferAmountBnb: config?.minTransferAmountBnb ?? 0.1,
     

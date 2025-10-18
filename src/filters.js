@@ -124,33 +124,14 @@ export class TradeFilter {
         return results;
       }
 
-      // Filter 3: Check buy amount (for BUY trades)
-      if (tradeData.swapType === 'BUY') {
-        results.filters.maxBuyAmount = this.checkMaxBuyAmount(tradeData.amountInBnb);
-        if (!results.filters.maxBuyAmount.passed) {
-          results.passed = false;
-          return results;
-        }
-      }
-
-      // Filter 4: Check gas price
-      results.filters.gasPrice = await this.checkGasPrice();
+      // Filter 3: Check gas price (with swap type)
+      results.filters.gasPrice = await this.checkGasPrice(tradeData.swapType);
       if (!results.filters.gasPrice.passed) {
         results.passed = false;
         return results;
       }
 
-      // Filter 5: Check liquidity
-      results.filters.liquidity = await this.checkLiquidity(
-        tradeData.tokenIn,
-        tradeData.tokenOut
-      );
-      if (!results.filters.liquidity.passed) {
-        results.passed = false;
-        return results;
-      }
-
-      // Filter 6: Check token age (for new tokens)
+      // Filter 4: Check token age (for BUY trades only)
       if (tradeData.swapType === 'BUY') {
         results.filters.tokenAge = await this.checkTokenAge(tradeData.tokenOut);
         if (!results.filters.tokenAge.passed) {
@@ -207,39 +188,37 @@ export class TradeFilter {
   }
 
   /**
-   * Check if buy amount is within limit
+   * Get fixed buy amount from config
    */
-  async checkMaxBuyAmount(amountBnb) {
+  async getBuyAmount() {
     const activeConfig = await this.getConfig();
-    const withinLimit = amountBnb <= activeConfig.maxBuyAmountBnb;
-    
-    return {
-      passed: withinLimit,
-      reason: withinLimit
-        ? `Amount ${amountBnb} BNB within limit`
-        : `Amount ${amountBnb} BNB exceeds max ${activeConfig.maxBuyAmountBnb} BNB`,
-      amountBnb,
-      maxBuyAmountBnb: activeConfig.maxBuyAmountBnb,
-    };
+    // Use buyAmountBnb (new field) or fall back to maxBuyAmountBnb (legacy)
+    return activeConfig.buyAmountBnb || activeConfig.maxBuyAmountBnb || 0.01;
   }
 
   /**
-   * Check current gas price
+   * Check current gas price against buy/sell limits
    */
-  async checkGasPrice() {
+  async checkGasPrice(swapType = 'BUY') {
     try {
       const activeConfig = await this.getConfig();
       const feeData = await this.provider.getFeeData();
       const gasPriceGwei = parseFloat(ethers.formatUnits(feeData.gasPrice, 'gwei'));
-      const withinLimit = gasPriceGwei <= activeConfig.maxGasPriceGwei;
+      
+      // Use different limits for buy vs sell
+      const maxGas = swapType === 'BUY' 
+        ? (activeConfig.buyGasGwei || activeConfig.maxGasPriceGwei || 10)
+        : (activeConfig.sellGasGwei || activeConfig.maxGasPriceGwei || 10);
+      
+      const withinLimit = gasPriceGwei <= maxGas;
       
       return {
         passed: withinLimit,
         reason: withinLimit
-          ? `Gas price ${gasPriceGwei.toFixed(2)} Gwei acceptable`
-          : `Gas price ${gasPriceGwei.toFixed(2)} Gwei exceeds max ${activeConfig.maxGasPriceGwei} Gwei`,
+          ? `Gas price ${gasPriceGwei.toFixed(2)} Gwei acceptable for ${swapType}`
+          : `Gas price ${gasPriceGwei.toFixed(2)} Gwei exceeds max ${maxGas} Gwei for ${swapType}`,
         gasPriceGwei,
-        maxGasPriceGwei: activeConfig.maxGasPriceGwei,
+        maxGasGwei: maxGas,
       };
     } catch (error) {
       logger.warn('Could not check gas price:', error.message);
@@ -247,70 +226,7 @@ export class TradeFilter {
     }
   }
 
-  /**
-   * Check liquidity of token pair (in USD)
-   */
-  async checkLiquidity(tokenA, tokenB) {
-    try {
-      // Get pair address
-      const pairAddress = await this.factory.getPair(tokenA, tokenB);
-      
-      if (pairAddress === ethers.ZeroAddress) {
-        return { 
-          passed: false, 
-          reason: 'No liquidity pool exists for this pair' 
-        };
-      }
-
-      // Get pair contract
-      const pair = new ethers.Contract(pairAddress, PANCAKE_PAIR_ABI, this.provider);
-      
-      // Get reserves
-      const reserves = await pair.getReserves();
-      const token0 = await pair.token0();
-      const token1 = await pair.token1();
-
-      // Determine which reserve is BNB/WBNB
-      const wbnbAddress = config.wbnb.toLowerCase();
-      let bnbReserve;
-      
-      if (token0.toLowerCase() === wbnbAddress) {
-        bnbReserve = reserves.reserve0;
-      } else if (token1.toLowerCase() === wbnbAddress) {
-        bnbReserve = reserves.reserve1;
-      } else {
-        // Neither token is BNB, can't check liquidity in BNB terms
-        return { passed: true, reason: 'Token-to-token swap, BNB liquidity check skipped' };
-      }
-
-      const liquidityBnb = parseFloat(ethers.formatEther(bnbReserve));
-      
-      // Get BNB price and convert to USD
-      const activeConfig = await this.getConfig();
-      const bnbPriceUsd = await this.getBnbPriceUsd();
-      const liquidityUsd = liquidityBnb * bnbPriceUsd;
-      
-      const sufficient = liquidityUsd >= activeConfig.minLiquidityUsd;
-
-      return {
-        passed: sufficient,
-        reason: sufficient
-          ? `Liquidity $${liquidityUsd.toFixed(0)} is sufficient`
-          : `Liquidity $${liquidityUsd.toFixed(0)} below minimum $${activeConfig.minLiquidityUsd}`,
-        liquidityBnb,
-        liquidityUsd,
-        minLiquidityUsd: activeConfig.minLiquidityUsd,
-        pairAddress,
-      };
-    } catch (error) {
-      logger.warn('Could not check liquidity:', error.message);
-      // On error, be cautious and reject
-      return { 
-        passed: false, 
-        reason: `Liquidity check failed: ${error.message}` 
-      };
-    }
-  }
+  // Liquidity check removed - no longer used
 
   /**
    * Check token age (time since contract deployment)
@@ -340,17 +256,21 @@ export class TradeFilter {
       const firstEvent = events[0];
       const activeConfig = await this.getConfig();
       const block = await this.provider.getBlock(firstEvent.blockNumber);
-      const tokenAgeHours = (Date.now() / 1000 - block.timestamp) / 3600;
+      const tokenAgeSeconds = Date.now() / 1000 - block.timestamp;
       
-      const acceptable = tokenAgeHours <= activeConfig.maxTokenAgeHours || activeConfig.maxTokenAgeHours === 0;
+      // Use maxTokenAgeSeconds (new) or fall back to maxTokenAgeHours * 3600 (legacy)
+      const maxAgeSeconds = activeConfig.maxTokenAgeSeconds || 
+                           (activeConfig.maxTokenAgeHours ? activeConfig.maxTokenAgeHours * 3600 : 0);
+      
+      const acceptable = tokenAgeSeconds <= maxAgeSeconds || maxAgeSeconds === 0;
 
       return {
         passed: acceptable,
         reason: acceptable
-          ? `Token age ${tokenAgeHours.toFixed(2)} hours is acceptable`
-          : `Token age ${tokenAgeHours.toFixed(2)} hours exceeds max ${activeConfig.maxTokenAgeHours} hours`,
-        tokenAgeHours,
-        maxTokenAgeHours: activeConfig.maxTokenAgeHours,
+          ? `Token age ${tokenAgeSeconds.toFixed(0)}s is acceptable`
+          : `Token age ${tokenAgeSeconds.toFixed(0)}s exceeds max ${maxAgeSeconds}s`,
+        tokenAgeSeconds,
+        maxTokenAgeSeconds: maxAgeSeconds,
       };
     } catch (error) {
       logger.warn('Could not check token age:', error.message);
@@ -360,15 +280,9 @@ export class TradeFilter {
   }
 
   /**
-   * Calculate adjusted buy amount based on max limit
+   * Get fixed buy amount from config (ignores original amount)
    */
-  async calculateAdjustedAmount(originalAmountBnb) {
-    const activeConfig = await this.getConfig();
-    if (originalAmountBnb <= activeConfig.maxBuyAmountBnb) {
-      return originalAmountBnb;
-    }
-    
-    // Cap at max buy amount
-    return activeConfig.maxBuyAmountBnb;
+  async getFixedBuyAmount() {
+    return await this.getBuyAmount();
   }
 }

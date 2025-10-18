@@ -269,18 +269,16 @@ export class WalletTracker extends EventEmitter {
         return;
       }
 
-      // Calculate adjusted amount if needed
-      let adjustedAmount = null;
+      // Get fixed buy amount from config (BUY only)
+      let buyAmount = null;
       if (analysis.swapType === 'BUY') {
-        adjustedAmount = await this.filter.calculateAdjustedAmount(analysis.amountInBnb);
-        if (adjustedAmount !== analysis.amountInBnb) {
-          logger.info(`📊 Adjusted buy amount: ${analysis.amountInBnb} -> ${adjustedAmount} BNB`);
-        }
+        buyAmount = await this.filter.getFixedBuyAmount();
+        logger.info(`💰 Using fixed buy amount: ${buyAmount} BNB (watched wallet bought ${analysis.amountInBnb} BNB)`);
       }
 
       // Execute the copy trade
       logger.info('🎯 Executing copy trade...');
-      const result = await this.executor.executeTrade(analysis, adjustedAmount);
+      const result = await this.executor.executeTrade(analysis, buyAmount);
 
       if (result.success) {
         this.stats.tradesExecuted++;
@@ -300,7 +298,7 @@ export class WalletTracker extends EventEmitter {
         this.emit('trade', {
           type: analysis.swapType,
           token: result.tokenAddress || analysis.tokenOut || analysis.tokenIn,
-          amount: result.amountBnb || adjustedAmount,
+          amount: result.amountBnb || buyAmount,
           txHash: result.txHash,
           timestamp: Date.now(),
           success: true
@@ -310,7 +308,7 @@ export class WalletTracker extends EventEmitter {
         await this.notificationService.notifyTradeSuccess(
           analysis.swapType,
           result.tokenAddress || analysis.tokenOut || analysis.tokenIn,
-          `${result.amountBnb || adjustedAmount} BNB`,
+          `${result.amountBnb || buyAmount} BNB`,
           result.txHash,
           config.autoTakeProfitEnabled ? config.takeProfitPercent : null
         );
@@ -322,7 +320,7 @@ export class WalletTracker extends EventEmitter {
         this.emit('trade', {
           type: analysis.swapType,
           token: analysis.tokenOut || analysis.tokenIn,
-          amount: adjustedAmount || analysis.amountInBnb,
+          amount: buyAmount || analysis.amountInBnb,
           timestamp: Date.now(),
           success: false,
           error: result.reason || result.error
@@ -429,17 +427,27 @@ export class WalletTracker extends EventEmitter {
     
     logger.info('\n⚙️  Configuration:');
     logger.info(`   Mode: ${activeConfig.copyBuyOnly ? '🟢 BUY ONLY' : '🔵 BUY & SELL'}`);
-    logger.info(`   Max Buy Amount: ${activeConfig.maxBuyAmountBnb} BNB`);
-    logger.info(`   Slippage: ${activeConfig.slippagePercent}%`);
-    logger.info(`   Max Gas Price: ${activeConfig.maxGasPriceGwei} Gwei`);
-    logger.info(`   Min Liquidity: $${activeConfig.minLiquidityUsd.toLocaleString()}`);
-    logger.info(`   Max Token Age: ${activeConfig.maxTokenAgeHours} hours`);
-    logger.info(`   One-Time Buy: ${activeConfig.oneTimeBuyPerToken ? 'Enabled' : 'Disabled'}`);
+    logger.info(`   Buy Amount: ${activeConfig.buyAmountBnb || activeConfig.maxBuyAmountBnb || 0.01} BNB (fixed)`);
+    logger.info(`   Buy Gas: ${activeConfig.buyGasGwei || activeConfig.maxGasPriceGwei || 10} Gwei`);
+    logger.info(`   Sell Gas: ${activeConfig.sellGasGwei || activeConfig.maxGasPriceGwei || 10} Gwei`);
+    logger.info(`   Buy Slippage: ${activeConfig.buySlippagePercent || activeConfig.slippagePercent || 2}%`);
+    logger.info(`   Sell Slippage: ${activeConfig.sellSlippagePercent || activeConfig.slippagePercent || 2}%`);
+    
+    const maxAgeSeconds = activeConfig.maxTokenAgeSeconds || (activeConfig.maxTokenAgeHours ? activeConfig.maxTokenAgeHours * 3600 : 0);
+    logger.info(`   Max Token Age: ${maxAgeSeconds}s (${maxAgeSeconds === 0 ? 'unlimited' : `${(maxAgeSeconds/60).toFixed(0)}min`})`);
+    
+    if (activeConfig.maxMarketCapUsd && activeConfig.maxMarketCapUsd > 0) {
+      logger.info(`   Max Market Cap: $${activeConfig.maxMarketCapUsd.toLocaleString()}`);
+    } else {
+      logger.info(`   Max Market Cap: Unlimited`);
+    }
+    
     logger.info(`   Auto-Follow: ${activeConfig.autoFollowEnabled ? 'Enabled' : 'Disabled'}`);
     logger.info(`   Fast Mode: ${activeConfig.fastMode ? `Enabled (${activeConfig.gasMultiplier}x gas)` : 'Disabled'}`);
     
     if (activeConfig.autoTakeProfitEnabled) {
-      logger.info(`   Take Profit: ${activeConfig.takeProfitPercent}%`);
+      const bagPercent = activeConfig.takeProfitBagPercent || 100;
+      logger.info(`   Take Profit: ${activeConfig.takeProfitPercent}% gain → Sell ${bagPercent}% of bag`);
     }
     
     if (activeConfig.enableTelegramAlerts) {
