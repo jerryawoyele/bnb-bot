@@ -199,6 +199,26 @@ export class ControllerAPI extends EventEmitter {
       }
     });
 
+    // Get ALL logs from ALL sessions
+    this.app.get('/api/logs/all', async (req, res) => {
+      try {
+        const logs = await this.database.getAllLogs();
+        res.json({ logs });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Delete ALL logs from database
+    this.app.delete('/api/logs/all', async (req, res) => {
+      try {
+        await this.database.clearAllLogs();
+        res.json({ success: true, message: 'All logs cleared' });
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
     // Get current trades
     this.app.get('/api/trades', async (req, res) => {
       try {

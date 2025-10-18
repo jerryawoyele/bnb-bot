@@ -15,7 +15,17 @@ import { Activity, Play, Square } from 'lucide-react';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
-  const [activeTab, setActiveTab] = useState(null); // null until bot status is known
+  // Get initial tab from URL or localStorage
+  const getInitialTab = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+    if (tabFromUrl) return tabFromUrl;
+    
+    const savedTab = localStorage.getItem('activeTab');
+    return savedTab || null; // null until bot status is known
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab());
   const [status, setStatus] = useState(null);
   const [botStatus, setBotStatus] = useState(null);
   const [stats, setStats] = useState(null);
@@ -88,13 +98,30 @@ function App() {
       // Set default tab based on bot status (only if not already set)
       setActiveTab(prev => {
         if (prev === null) {
-          return botStatusData.isRunning ? 'home' : 'control';
+          const defaultTab = botStatusData.isRunning ? 'home' : 'control';
+          // Save to localStorage
+          localStorage.setItem('activeTab', defaultTab);
+          // Update URL
+          const url = new URL(window.location);
+          url.searchParams.set('tab', defaultTab);
+          window.history.replaceState({}, '', url);
+          return defaultTab;
         }
         return prev;
       });
     } catch (error) {
       console.error('Failed to fetch initial data:', error);
     }
+  };
+
+  // Update tab and persist to localStorage + URL
+  const changeTab = (tab) => {
+    setActiveTab(tab);
+    localStorage.setItem('activeTab', tab);
+    // Update URL
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url);
   };
 
   const handleStartBot = async (walletAddress) => {
@@ -196,7 +223,7 @@ function App() {
         status={status} 
         connected={connected}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={changeTab}
       />
       
       <main className="container mx-auto px-4 py-8">
@@ -234,12 +261,11 @@ function App() {
                       <p className="text-sm text-gray-400">
                         {botStatus.mode === 'detecting' && '🔍 Detecting wallet...'}
                         {botStatus.mode === 'tracking' && `📊 Tracking: ${botStatus.watchedWallet}`}
-                        {botStatus.mode === 'stopped' && 'Ready to start'}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setActiveTab('control')}
+                    onClick={() => changeTab('home')}
                     className="btn btn-sm btn-primary"
                   >
                     {botStatus.isRunning ? 'Stop Bot' : 'Start Bot'}

@@ -11,11 +11,11 @@ export default function LogsView({ socket }) {
   const logsEndRef = useRef(null);
   const logsContainerRef = useRef(null);
 
-  // Fetch logs from API on mount
+  // Fetch ALL logs from ALL sessions on mount
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/logs?limit=500`);
+        const response = await axios.get(`${API_URL}/api/logs/all`);
         setLogs(response.data.logs || []);
         // Scroll to bottom after loading
         setTimeout(() => {
@@ -48,7 +48,7 @@ export default function LogsView({ socket }) {
     // Listen for new log events (real-time)
     socket.on('log', (log) => {
       setLogs((prev) => {
-        const newLogs = [...prev, log].slice(-500); // Keep last 500 logs
+        const newLogs = [...prev, log]; // Keep all logs
         return newLogs;
       });
       
@@ -77,8 +77,19 @@ export default function LogsView({ socket }) {
     setAutoScroll(isAtBottom);
   };
 
-  const clearLogs = () => {
-    setLogs([]);
+  const clearLogs = async () => {
+    if (!confirm('Clear all logs from database? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API_URL}/api/logs/all`);
+      setLogs([]);
+      console.log('✅ All logs cleared from database');
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
+      alert('Failed to clear logs. Please try again.');
+    }
   };
 
   const downloadLogs = () => {

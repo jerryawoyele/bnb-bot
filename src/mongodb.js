@@ -175,6 +175,29 @@ export class MongoDatabase {
     }
   }
 
+  async getAllLogs() {
+    try {
+      // Get ALL logs from ALL sessions, sorted by timestamp
+      return await Log.find({})
+        .sort({ timestamp: 1 })
+        .lean();
+    } catch (error) {
+      console.error('Failed to get all logs:', error.message);
+      return [];
+    }
+  }
+
+  async clearAllLogs() {
+    try {
+      const result = await Log.deleteMany({});
+      console.log(`✅ Cleared ${result.deletedCount} logs from database`);
+      return result;
+    } catch (error) {
+      console.error('Failed to clear logs:', error.message);
+      throw error;
+    }
+  }
+
   // ============ TRADES ============
 
   async insertTrade(trade) {
