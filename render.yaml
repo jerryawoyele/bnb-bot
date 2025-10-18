@@ -1,0 +1,59 @@
+services:
+  - type: web
+    name: bnb-copy-bot
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/main-controller.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WS_RPC
+        sync: false
+      - key: HTTP_RPC
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: PANCAKE_ROUTER
+        value: 0x10ED43C718714eb63d5aA57B78B54704E256024E
+      - key: WBNB
+        value: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+      - key: COPY_BUY_ONLY
+        value: true
+      - key: COPY_SELL
+        value: false
+      - key: AUTO_TAKE_PROFIT_ENABLED
+        value: true
+      - key: TAKE_PROFIT_PERCENT
+        value: 100
+      - key: MAX_BUY_AMOUNT_BNB
+        value: 0.5
+      - key: SLIPPAGE_PERCENT
+        value: 2
+      - key: MAX_GAS_PRICE_GWEI
+        value: 10
+      - key: MIN_LIQUIDITY_USD
+        value: 10000
+      - key: MAX_TOKEN_AGE_HOURS
+        value: 72
+      - key: ONE_TIME_BUY_PER_TOKEN
+        value: true
+      - key: AUTO_FOLLOW_ENABLED
+        value: true
+      - key: MIN_TRANSFER_AMOUNT_BNB
+        value: 0.1
+      - key: FAST_MODE
+        value: true
+      - key: GAS_MULTIPLIER
+        value: 1.2
+      - key: LOG_LEVEL
+        value: info
+      - key: MONGODB_URI
+        sync: false
+      - key: API_PORT
+        value: 3001
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        sync: false
